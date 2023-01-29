@@ -17,30 +17,27 @@ conn = psycopg2.connect(
 
 cur = conn.cursor()
 
-default_url = 'https://pokeapi.co/api/v2/pokemon'
-
 sql = '''
-CREATE TABLE IF NOT EXISTS pokeapi (
-    id INTEGER,
-    body JSONB
-);
+DROP TABLE IF EXISTS pokeapi CASCADE;
+CREATE TABLE IF NOT EXISTS pokeapi
+(id SERIAL, body JSONB);
 '''
-
+print(sql)
 cur.execute(sql)
 
-response = requests.get(default_url);
-data = response.json()
-urls = [result['url'] for result in data['results'][:100]]
-
-for url in urls:
+for i in range(1, 101):
+    url = f'https://pokeapi.co/api/v2/pokemon/{i}'
     response = requests.get(url)
-    json_data = response.json()
+    sql = f'INSERT INTO pokeapi (body) values (%s)'
+    json_response = json.dumps(response.json())
+    print(sql)
+    cur.execute(sql, (json_response, ))
 
-    sql = '''
-        INSERT INTO pokeapi (body) VALUES (%s);
-    '''
+sql = 'SELECT body FROM pokeapi LIMIT 1;'
+print(sql)
+cur.execute(sql)
+# print(cur.fetchone()[0])
 
-    cur.execute(sql, (json.dumps(json_data), ))
-
+print('Closing database connection...')
 conn.commit()
-conn.close()
+cur.close()
